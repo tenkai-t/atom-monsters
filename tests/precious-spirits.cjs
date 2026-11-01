@@ -1,0 +1,16 @@
+const fs=require('fs'),vm=require('vm'),assert=require('assert');
+const elements=new Map(),store=new Map();function el(id){if(!elements.has(id)){const e={innerHTML:'',textContent:'',value:'',dataset:{},open:false,style:{setProperty(){}},classList:{add(){},remove(){},toggle(){},contains(){return false}},querySelector(){return el(id+' child')},querySelectorAll(){return[]},insertAdjacentHTML(){},appendChild(){},after(){},remove(){},setAttribute(){},addEventListener(){},showModal(){this.open=true},close(){this.open=false},clientWidth:390,clientHeight:430,firstChild:{style:{}},getBoundingClientRect(){return{left:0,top:0}},setPointerCapture(){}};elements.set(id,e)}return elements.get(id)}
+const ctx={console,Blob,Response,CompressionStream,DecompressionStream,Uint8Array,btoa,atob,escape,unescape,performance:{now:()=>10},document:{getElementById:el,querySelector:el,querySelectorAll:()=>[],createElement:()=>el('new'),body:el('body'),addEventListener(){}},localStorage:{getItem:k=>store.get(k)||null,setItem:(k,v)=>store.set(k,v),removeItem:k=>store.delete(k)},location:{hash:''},navigator:{},addEventListener(){},setInterval(){},setTimeout:fn=>{fn();return 1},requestAnimationFrame:()=>1,cancelAnimationFrame(){}};ctx.window=ctx;vm.createContext(ctx);const run=s=>vm.runInContext(s,ctx);run(fs.readFileSync(__dirname+'/../index.html','utf8').match(/<script>([\s\S]*?)<\/script>/)[1]);const test=(name,fn)=>{fn();console.log('PASS',name)};
+
+run("var before=JSON.stringify({G,E,M,SKL,FL,RM});var outputs=[];");
+for(const id of ['Cu','Ag','Au','Pt'])for(const state of ['n','a','h','k','j','f']){
+ const svg=run(`chr('${id}','${state}')`);assert(svg.includes('data-precious="2"'));assert(svg.includes('state-'+state));assert(svg.includes('precious-face'));assert(!svg.includes('__UID__')&&!svg.includes('__FACE__'));assert(!svg.includes('<image'));
+ const ids=[...svg.matchAll(/\bid="([^"]+)"/g)].map(x=>x[1]);const refs=[...svg.matchAll(/url\(#([^)]+)\)/g)].map(x=>x[1]);assert(refs.every(x=>ids.includes(x)));run(`outputs.push(${JSON.stringify(svg)})`);
+ if(state==='k')assert(svg.includes('l8 8m0-8-8 8'));
+ if(state==='j')assert(svg.includes('q5-8 10 0'));
+ if(state==='h')assert(svg.includes('l6 4-6 4'));
+}
+assert.equal(run('JSON.stringify({G,E,M,SKL,FL,RM})'),run('before'));console.log('PASS all four approved spirits support idle, attack, damage, defeat, recruitment and retreat without changing game data');
+const combined=run("outputs.join('')"),allIds=[...combined.matchAll(/\bid="([^"]+)"/g)].map(x=>x[1]);assert.equal(new Set(allIds).size,allIds.length);console.log('PASS repeated party, enemy and encyclopedia instances have independent SVG paint IDs');
+for(const id of run('Object.keys(M)')){if(['Cu','Ag','Au','Pt'].includes(id))continue;const actual=run(`chr('${id}')`).replace(/lab\d+/g,'lab'),original=run(`basePreciousChr('${id}','n')`).replace(/lab\d+/g,'lab');assert.equal(actual,original)}console.log('PASS every other monster retains the existing artwork');
+const html=fs.readFileSync(__dirname+'/../index.html','utf8');assert(html.includes('prefers-reduced-motion:reduce'));assert(html.includes('.precious-spirit .precious-float,.precious-spirit .ey{animation:none!important'));console.log('PASS reduced motion disables the new hover, damage and celebration animations');
