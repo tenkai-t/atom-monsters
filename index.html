@@ -272,7 +272,7 @@ function chrOld(id){const[c,a]=CL[id]||['#aaa','b'];const A={f:'<path d="M32 3c8
 let G,B=null,S='field',F={a:0,b:0,c:0},msg='',E=[];
 const gr=m=>1+.1*(m.lv-1),tt=(m,j)=>1+.1*((m.t||[])[j]||0)+sb(m,j),mx=m=>Math.floor(M[m.id][3]*gr(m)*tt(m,2)*(m.iv?m.iv[0]:1)*(m.bh||1)),stt=(m,k)=>Math.floor(M[m.id][k]*gr(m)*(k==4?tt(m,0):k==5?tt(m,1):k==6?tt(m,3):1)*(m.iv?m.iv[k-3]:1)*(k==4?(m.ba||1):k==5?(m.bd||1):1));
 const party=()=>G.r.filter(m=>m.p),topLv=()=>Math.max(...party().map(m=>m.lv)),act=()=>G.r.find(m=>m.u==B.pu);
-function add(id,lv,p){const m={u:G.nu++,id,lv,xp:0,p:p?1:0,s:3,iv:rollIV(),hue:rnd(-14,14)};m.hp=mx(m);G.r.push(m);G.got[id]=1;return m}
+function add(id,lv,p){lv=Math.max(1,Math.min(99,lv));const m={u:G.nu++,id,lv,xp:0,p:p?1:0,s:3,iv:rollIV(),hue:rnd(-14,14)};m.hp=mx(m);G.r.push(m);G.got[id]=1;return m}
 function spawn(){const pool=REG[G.rg||0][1];for(let t=0;t<50;t++){const x=rnd(0,W-1),y=rnd(0,HH-2);if(!(x==G.x&&y==G.y)&&!E.some(e=>e.x==x&&e.y==y)){E.push({x,y,id:pool[rnd(0,pool.length-1)],lv:rnd(1,3)+Math.floor(topLv()/3)+(G.rg||0)});return}}}
 function newG(){G={r:[],x:3,y:6,seen:{H:1,O:1},got:{},rc:{},nu:1,g:0,it:{h:1,l:1,e:1},cl:0};['H','H','O'].forEach(i=>add(i,1,1));E=[];while(E.length<5)spawn()}
 function save(){try{localStorage.setItem('am1',JSON.stringify({G,E}))}catch(e){}}
@@ -285,7 +285,7 @@ return{v:Math.max(1,Math.round((stt(a,4)*pow-stt(d,5)*.5)*(.9+battleRandom()*.2)
 function fight(e){for(const k in K)delete K[k];const P=party().filter(m=>m.hp>0);if(!P.length){G.inv=Date.now()+2200;msg='生存している仲間を編成するか、蘇生薬・蘇生技で復活させてください。';return draw()}
 const pool=REG[G.rg||0][1],Ep=[{id:e.id,lv:e.lv}];if(e.boss){const bz=e.boss=='b';Ep[0].bh=bz?3:2;Ep[0].ba=bz?1.6:1.3;Ep[0].bd=bz?1.3:1.15;Ep[0].boss=e.boss;Ep[0].nobond=bz;for(let k=2;k>0;k--)Ep.push({id:pool[rnd(0,pool.length-1)],lv:Math.max(1,e.lv-2)});Ep.splice(1,0,Ep.shift())}for(let k=e.boss||e.quest?0:rnd(0,2);k>0;k--)Ep.push({id:pool[rnd(0,pool.length-1)],lv:Math.max(1,e.lv+rnd(-1,0))});
 let rare='';G.bc=(G.bc||0)+1;if(!e.boss&&!e.quest&&Math.random()<.05){const q=Math.random(),rg=G.rg||0;rare=rg>=5&&q<.04?'Pt':rg>=3&&q<.16?'Au':q<.45?'Ag':'Cu';G.rn=(G.rn||0)+1;const rr={id:rare,lv:e.lv+1};if(Ep.length<3)Ep.push(rr);else Ep[2]=rr}
-Ep.forEach((x,enemyIndex)=>{x.e=1;x.iv=rollIV();x.hue=rnd(-14,14);x.hp=mx(x);x.u='e'+enemyIndex;x.st=BS[x.id]||'l';G.seen[x.id]=1});P.forEach(m=>m.st=BS[m.id]||'l');
+Ep.forEach((x,enemyIndex)=>{x.lv=Math.min(99,x.lv);x.e=1;x.iv=rollIV();x.hue=rnd(-14,14);x.hp=mx(x);x.u='e'+enemyIndex;x.st=BS[x.id]||'l';G.seen[x.id]=1});P.forEach(m=>m.st=BS[m.id]||'l');
 B3={P,Ep,ref:e,ph:'tac',ci:0,cmds:[],gg:0,sp:{},mp:{},pend:null,msg:`${Ep.map(x=>M[x.id][0]).join('、')}が現れた！ 作戦を選ぼう。`};initBattleRecord(B3);if(e.boss)B3.msg=`${e.boss=='b'?'【ボス】':'【中ボス】'}${M[e.id][0]}が立ちはだかる！`;if(rare)B3.msg=`✨まばゆい光とともに${M[rare][0]}が現れた！ 逃げられる前にボンドしよう！`;envInit();S='b3';draw3()}
 function fightOld(e){const p=party().find(m=>m.hp>0);if(!p){G.r.forEach(m=>m.hp=mx(m));return draw()}
 G.seen[e.id]=1;const emx=mx({id:e.id,lv:e.lv});B={ref:e,en:{id:e.id,lv:e.lv},ehp:emx,emx,pu:p.u,sp:{},lg:[`野生の${M[e.id][0]}が現れた！`]};S='battle';draw()}
@@ -298,7 +298,7 @@ save();draw()}
 const pct=()=>Math.round(100*Math.min(.9,Math.max(.05,.2+.6*(1-B.ehp/B.emx)-.08*(M[B.en.id][2]-1)+(B.lure?.25:0))));
 function end(t,rm){if(rm){E=E.filter(x=>x!=B.ref);spawn()}B=null;S='field';msg=t;save();draw()}
 function win(){const e=B.en,x=10+e.lv*8,L=[`${M[e.id][0]}を倒した！ 経験値${x}。`];const gd=5+e.lv*4;G.g+=gd;L[0]+=` ${gd}G獲得。`;
-G.r.filter(m=>m.p?m.hp>0:1).forEach(m=>{m.xp+=m.p?x:Math.ceil(x/2);while(m.xp>=m.lv*20){m.xp-=m.lv*20;m.lv++;m.s=(m.s||0)+1;m.hp=Math.min(mx(m),m.hp+Math.ceil(mx(m)*.3));L.push(`${M[m.id][0]}がLv${m.lv}に！`)}});end(L.join(' '),1)}
+G.r.filter(m=>m.p?m.hp>0:1).forEach(m=>{m.xp+=m.p?x:Math.ceil(x/2);while(m.lv<99&&m.xp>=m.lv*20){m.xp-=m.lv*20;m.lv++;m.s=(m.s||0)+1;m.hp=Math.min(mx(m),m.hp+Math.ceil(mx(m)*.3));L.push(`${M[m.id][0]}がLv${m.lv}に！`)}});end(L.join(' '),1)}
 function etn(){const L=B.lg,p=act(),e=B.en;if(e.id=='He'&&Math.random()<.3)return end('ヘリは風のように逃げ去った！',1);
 const t=M[e.id][8],s=t!='none'&&Math.random()<.35,r=hit(e,p,s?t:'none',s?1.5:1);p.hp=Math.max(0,p.hp-r.v);
 L.push(`${M[e.id][0]}の${s?SK[t][0]:'攻撃'}！ ${r.v}ダメージ`);if(r.k>1)L.push('効果は抜群！');
@@ -386,7 +386,7 @@ async function win3(){
  L.forEach(e=>{const bm=e.boss=='b'?6:e.boss=='m'?3:1;x+=(6+e.lv*5)*(RX[e.id]||1)*bm;gd+=Math.round((5+e.lv*4)*(RX[e.id]?RX[e.id]/2:1)*bm)});
  G.g+=gd;sfx(880,.4,'sine');b.P.forEach(m=>{if(m.hp>0)ex(m,'j')});await say(b.bonded?`ボンド成立で戦闘終了！ 経験値${x}、${gd}G獲得！`:!L.length?'敵は全員逃げ去った…':`勝利！ 経験値${x}、${gd}G獲得！`);if(L.length){const dr=dropItem();if(dr)await say(dr)}
  const eligible=new Set(b.eligible||G.r.map(m=>m.u)),joined=new Set(b.participants||b.P.map(m=>m.u));
- for(const m of G.r.filter(m=>eligible.has(m.u))){m.xp+=joined.has(m.u)?x:Math.ceil(x/2);while(m.xp>=xn(m)){m.xp-=xn(m);m.lv++;m.s=(m.s||0)+(m.lv%5===0?3:0);if(m.hp>0)m.hp=Math.min(mx(m),m.hp+Math.ceil(mx(m)*.3));flash('#ffe27a');sfx(990,.3,'sine');await say(`${M[m.id][0]}がLv${m.lv}になった！`)}}
+ for(const m of G.r.filter(m=>eligible.has(m.u))){if(m.lv>=99){m.xp=0;continue;}m.xp+=joined.has(m.u)?x:Math.ceil(x/2);while(m.lv<99&&m.xp>=xn(m)){m.xp-=xn(m);m.lv++;m.s=(m.s||0)+(m.lv%5===0?3:0);if(m.hp>0)m.hp=Math.min(mx(m),m.hp+Math.ceil(mx(m)*.3));flash('#ffe27a');sfx(990,.3,'sine');await say(`${M[m.id][0]}がLv${m.lv}${m.lv===99?' MAX':''}になった！`)}if(m.lv>=99)m.xp=0;}
  end3((b.bonded?'ボンド成立！':!L.length?'敵は全員逃げ去った。':'戦闘に勝利した！')+` 経験値${x}・${gd}G獲得。`,1);
 }
 function end3(t,rm){
@@ -925,6 +925,15 @@ HD.medpage=x=>{medicinePage=Math.max(0,+x);draw();};
 function nextSPHint(m){const next=(Math.floor(m.lv/5)+1)*5;return `次のSP：Lv${next}で＋3（あと${next-m.lv}Lv）`;}
 const milestoneSkillUI=skUI;skUI=function(m){let html=milestoneSkillUI(m);gsk(m);m.sk.forEach((s,i)=>{const p=m.pt[s]||0;if(!(m.s>0)||p>=10)html=html.replace(`class='skill-point' data-a='sp:${m.u}.${i}'`,`class='skill-point' disabled data-a='sp:${m.u}.${i}'`);});return html;};
 const milestoneRoster=rosterScreen;rosterScreen=function(){milestoneRoster();const heading=document.querySelector('#app > .sub');if(heading)heading.insertAdjacentHTML('afterend','<details class="sp-policy"><summary>SPの獲得ルール</summary><p>仲間になった時のSPは3。Lv5・10・15…95に到達すると3SP増えます。レベル上限は99で、Lv1から育てたレベル分の累計SPは60です。主要ボスの初回撃破ではパーティ全員に3SP、地域調査の初回報酬は200Gと大回復薬2個です。</p><p>変更前に獲得したSP・振り分けたポイント・習得技はそのままです。高いレベルで仲間になった場合も過去のレベル分は追加されません。配合によるSP・スキルの引き継ぎは従来通りです。</p></details>');};
+
+// Stage 4: level 99 cap, including legacy saves and every acquisition path.
+const LEVEL_CAP=99;
+nextSPHint=function(m){if(m.lv>=LEVEL_CAP)return 'Lv99 MAX：レベルによる追加SPはありません。';const next=(Math.floor(m.lv/5)+1)*5;return next>LEVEL_CAP?'レベルによるSP獲得はLv95までです。':`次のSP：Lv${next}で＋3（あと${next-m.lv}Lv）`;};
+const cappedNormalize=normalizeSave;
+normalizeSave=function(input){const data=cappedNormalize(input);for(const m of data.G.r){if(m.levelArchive!==undefined){const a=m.levelArchive;saveAssert(record(a)&&Number.isSafeInteger(a.lv)&&a.lv>LEVEL_CAP&&Number.isSafeInteger(25+a.lv*a.lv*8)&&nonnegative(a.xp)&&a.xp<25+a.lv*a.lv*8);}if(m.lv>LEVEL_CAP){m.levelArchive??={lv:m.lv,xp:m.xp};m.lv=LEVEL_CAP;}if(m.lv===LEVEL_CAP)m.xp=0;m.hp=Math.min(m.hp,mx(m));if(m.mp!==undefined)m.mp=Math.min(m.mp,mpmax(m));}data.E.forEach(e=>e.lv=Math.min(LEVEL_CAP,e.lv));if(data.battle){const b=data.battle;b.Ep.forEach(e=>{e.lv=Math.min(LEVEL_CAP,e.lv);e.hp=Math.min(e.hp,mx(e));});if(b.ref)b.ref.lv=Math.min(LEVEL_CAP,b.ref.lv);for(const m of data.G.r)if(Object.hasOwn(b.mp,m.u))b.mp[m.u]=Math.min(b.mp[m.u],mpmax(m));}return data;};
+const cappedDetail=rosterDetail;rosterDetail=function(m){const xp=m.lv>=LEVEL_CAP?'レベル上限99に到達しました。':`次のレベルまで経験値 ${xn(m)-m.xp}（${m.xp}/${xn(m)}）`;return cappedDetail(m).replace('<p class="sp-summary">',`<p class="level-progress">${m.lv>=LEVEL_CAP?'<b>Lv99 MAX</b><br>':''}${xp}${m.levelArchive?`<br><small>旧データのLv${m.levelArchive.lv}・経験値${m.levelArchive.xp}は移行記録として保持しています。現在の能力はLv99基準です。SPと習得技は維持しています。</small>`:''}</p><p class="sp-summary">`);};
+const cappedRosterRow=rosterButton;rosterButton=function(m){return cappedRosterRow(m).replace(`Lv${m.lv}`,`Lv${m.lv}${m.lv>=LEVEL_CAP?' MAX':''}`);};
+const cappedFight=fight;fight=function(e){e.lv=Math.min(LEVEL_CAP,e.lv);return cappedFight(e);};
 
 load();draw();
 </script></body></html>
