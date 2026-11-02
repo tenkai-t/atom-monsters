@@ -12,7 +12,8 @@ for(let i=0;i<3;i++){
 run(`let point${rg}_${i}=regionResearch().points[${i}];G.px=point${rg}_${i}.x;G.py=point${rg}_${i}.y;inspectResearch()`);
 if(run(`!!point${rg}_${i}.question`)&&rg!==0){const correct=run(`point${rg}_${i}.correct`);run(`HD.survey('answer.${(correct+1)%3}')`);assert(run(`!researchState().found[point${rg}_${i}.id]`));run(`HD.survey('answer.${correct}')`);}
 assert(run(`!!researchState().found[point${rg}_${i}.id]`));run('closeResearch()');}
-assert.equal(run('researchCount()'),3);run("G.px=360;G.py=850;var beforeRegionSP=party()[0].s;HD.survey('claim');closeResearch()");assert.equal(run('party()[0].s-beforeRegionSP'),rg===0?0:3);run("HD.survey('claim');closeResearch()");assert.equal(run('party()[0].s-beforeRegionSP'),rg===0?0:3);
+assert.equal(run('researchCount()'),3);run("G.px=360;G.py=850;var beforeRegionSP=party()[0].s,beforeRegionGold=G.g,beforeRegionMedicine=G.it.hh||0;HD.survey('claim');closeResearch()");assert.equal(run('party()[0].s-beforeRegionSP'),0);run("HD.survey('claim');closeResearch()");assert.equal(run('party()[0].s-beforeRegionSP'),0);
+assert.equal(run('G.g-beforeRegionGold'),rg===0?0:200);assert.equal(run('(G.it.hh||0)-beforeRegionMedicine'),rg===0?0:2);
 assert(run('fieldBackdrop().includes("<svg")'));assert(run('researchMapDots().includes("research-dot")'));
 // Every observation must be physically reachable from the base once its existing gate condition is met.
 assert(run(`(()=>{G.r.forEach(m=>m.p=0);for(const id of ['Au','Pt',REGG[G.rg].id||'H']){let m=G.r.find(x=>x.id===id)||add(id,30,0);m.p=1;}const seen=new Set(),q=[[360,804]];for(let n=0;n<q.length;n++){const[x,y]=q[n];for(const[dx,dy]of[[12,0],[-12,0],[0,12],[0,-12]]){const nx=x+dx,ny=y+dy,key=nx+','+ny;if(nx<24||nx>696||ny<24||ny>936||seen.has(key)||blk(nx,ny,16))continue;seen.add(key);q.push([nx,ny]);}}return regionResearch().points.every(p=>q.some(([x,y])=>Math.hypot(x-p.x,y-p.y)<24));})()`));
@@ -23,3 +24,4 @@ await run('codeOut()');el('sc').value=run('SCODE');await run('codeIn()');assert.
 run("save();let beforeReload=JSON.stringify(G.explore);load()");assert(run('JSON.stringify(G.explore)===beforeReload'));console.log('PASS all region states survive browser save/load');
 for(const s of ['field','map','fuse','party','train','shop','zukan','save'])run(`nv('${s}')`);console.log('PASS all screens after regional completion');
 })().catch(e=>{console.error(e);process.exitCode=1});
+
