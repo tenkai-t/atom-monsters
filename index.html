@@ -1070,7 +1070,64 @@ newG=function(){stage8NewG();if(G)G.regenAt=Date.now();};
 addEventListener('pagehide',()=>{if(typeof G!=='undefined'&&G&&!B3){G.regenAt=Date.now();save();}});
 document.addEventListener('visibilitychange',()=>{if(typeof G==='undefined'||!G)return;if(document.hidden){if(!B3){G.regenAt=Date.now();save();}}else{const healed=applyOfflineRegen();if(healed>0){stage8SetWelcome(`おかえりなさい。アプリを閉じている間に、仲間のHPが合計${healed}回復しました（自然回復）。`);save();draw();}}});
 
+// Stage 9: usability pass (8 fixes requested by the user). DOM/CSS level only:
+// no game rules, no save-format changes.
+//  1) Field: compact party HP/MP bar above the map (was below the fold)
+//  2) Field: compressed title + taller map
+//  3) Fusion: material search box (the roster screen already had one)
+//  4) Fusion: catalyst as a labelled slot instead of an ON/OFF mode toggle
+//  5) Roster: live search (debounced, focus restored) + collapsible filters
+//  6) Field: shop shortcut button (shop was two taps away in the menu)
+//  7) All small buttons raised to at least 44px tall
+//  8) Fusion: the fuse button looks disabled until 2+ materials are picked
+const stage9Style=document.createElement('style');
+stage9Style.textContent=`
+.party-mini{display:flex;gap:8px;align-items:flex-start;margin:0 0 8px}
+.pm-list{display:flex;gap:6px;flex:1;min-width:0}
+.pm-m{flex:1;display:flex;flex-direction:column;gap:3px;background:var(--pan);border:1px solid var(--ln);border-radius:12px;padding:6px 8px;min-width:0}
+.pm-head{display:flex;gap:5px;align-items:center;min-width:0}
+.pm-ic{width:20px;flex:none}
+.pm-ic svg{width:20px;height:20px}
+.pm-head b{font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pm-m small{font-size:10px;color:var(--mut);line-height:1.3;white-space:nowrap}
+.pm-bar{display:block;height:5px;background:#12303c;border-radius:3px;overflow:hidden}
+.pm-bar u{display:block;height:100%;background:linear-gradient(90deg,#2fe6a8,#7cf2c0)}
+.pm-m.dead{opacity:.55}.pm-m.dead b{color:#ff9a9a}
+.pm-shop{flex:none;min-height:44px;padding:0 14px;font-weight:700}
+#app:has(>.fv)>h1{font-size:19px;margin:0 0 2px}
+#app:has(>.fv)>.sub{font-size:12px;margin:0 0 6px}
+#app:has(>.fv)>.fv{height:min(63vh,540px)}
+body:has(#app>.fv) .brandbar{padding-top:6px;padding-bottom:6px}
+.fuse-search{display:flex;gap:8px;align-items:center;margin:10px 0 6px}
+.fuse-search input{flex:1;min-height:44px;font-size:16px;border-radius:12px;border:1px solid var(--ln);background:var(--pan);color:var(--ink);padding:8px 12px;min-width:0}
+.fuse-count{font-size:12px;color:var(--mut);white-space:nowrap}
+.fusion-actions button.cat-armed{outline:2px solid var(--acc);outline-offset:-2px;background:#14424a}
+.fusion-actions button small{display:block;font-size:11px;font-weight:400;opacity:.85}
+.fusion-actions button.fuse-not-ready{background:#3a4a52!important;color:#9fb4ba!important}
+.filt-toggle9{width:100%;min-height:44px;margin-top:8px}
+.battle-sound{min-height:44px;min-width:44px}
+.sl button{min-height:44px}
+.roster-tools button{min-height:44px}
+.recipe-info button{min-height:44px}
+.reaction-suggestions summary{min-height:44px;display:flex;align-items:center}
+`;
+document.head.appendChild(stage9Style);
+let FUSEQ9='',RFILTERS9=null,LIVE9=false,liveTimer9=null;
+function partyMiniHTML9(){return party().map(m=>{const mp=m.mp??mpmax(m);return `<div class="pm-m${m.hp<=0?' dead':''}"><span class="pm-head"><span class="pm-ic">${chr(m.id)}</span><b>${htmlText(m.nick||M[m.id][0].split('（')[0])}</b></span><span class="pm-bar"><u style="width:${Math.max(0,100*m.hp/mx(m))}%"></u></span><small>HP ${m.hp}/${mx(m)}</small><small>MP ${mp}/${mpmax(m)}</small></div>`;}).join('');}
+function stage9Field(){if(S!=='field')return;const app=$('app');if(!app||$('partyMini9'))return;const fv=app.querySelector('.fv');if(!fv)return;const bar=document.createElement('div');bar.id='partyMini9';bar.className='party-mini';bar.innerHTML=`<div class="pm-list">${partyMiniHTML9()}</div><button type="button" class="pm-shop" data-a="nv:shop">ショップ</button>`;fv.parentNode.insertBefore(bar,fv);}
+setInterval(()=>{const el=$('partyMini9');if(el&&S==='field'&&!B3){const l=el.querySelector('.pm-list');if(l)l.innerHTML=partyMiniHTML9();}},800);
+function stage9FuseFilter(){const list=document.querySelector('#app .list');if(!list)return;const q=FUSEQ9.trim().toLowerCase();let n=0;list.querySelectorAll('button.it').forEach(b=>{const oc=b.getAttribute('onclick')||'',uid=+((oc.match(/\d+/)||['0'])[0]),m=G.r.find(x=>x.u===uid);let hay=b.textContent.toLowerCase();if(m)hay+=` ${M[m.id][0]} ${M[m.id][1]} #${String(m.u).padStart(3,'0')} lv${m.lv}`.toLowerCase();const hit=!q||hay.includes(q);b.style.display=hit?'':'none';if(hit)n++;});const c=$('fuseCount9');if(c)c.textContent=q?`該当 ${n}体`:'';}
+function stage9Fuse(){if(S!=='fuse')return;const app=$('app');if(!app)return;const sub=app.querySelector('p.sub');if(sub)sub.textContent='下の仲間をタップして素材を選択。触媒は「触媒スロット」をタップしてから選びます。';const cat=app.querySelector('button[data-a="fc:"]');if(cat){const cm=G.r.find(m=>m.u===F.c);cat.classList.toggle('cat-armed',!!F.cm);cat.innerHTML=F.cm?'触媒にする仲間を選んでください<small>もう一度タップで中止</small>':cm?`触媒スロット：${M[cm.id][0]}<small>タップで変更</small>`:'触媒スロット：なし<small>タップで選ぶ</small>';}const go=[...app.querySelectorAll('.fusion-actions button')].find(b=>(b.getAttribute('onclick')||'').startsWith('fuse()'));if(go)go.classList.toggle('fuse-not-ready',(F.s||[]).length<2);const list=app.querySelector('.list');if(list&&!$('fuseSearch9')){const wrap=document.createElement('div');wrap.className='fuse-search';wrap.innerHTML=`<input id="fuseSearch9" type="search" placeholder="素材を名前・元素記号で探す" autocomplete="off"><span class="fuse-count" id="fuseCount9"></span>`;list.parentNode.insertBefore(wrap,list);const inp=wrap.querySelector('input');inp.value=FUSEQ9;inp.addEventListener('input',()=>{FUSEQ9=inp.value;stage9FuseFilter();});}stage9FuseFilter();}
+function stage9FiltersActive(){return ROSTER.filter!=='all'||ROSTER.sort!=='recent'||ROSTER.skill!=='';}
+function stage9Roster(){const form=document.querySelector('form.roster-tools');if(!form)return;if(!form.querySelector('.filt-toggle9')){const kids=[...form.children].slice(1);if(kids.length){const body=document.createElement('div');body.className='filt-body9';kids.forEach(k=>body.appendChild(k));form.appendChild(body);const tg=document.createElement('button');tg.type='button';tg.className='filt-toggle9';form.insertBefore(tg,body);const upd=()=>{const open=RFILTERS9===null?stage9FiltersActive():RFILTERS9;body.style.display=open?'':'none';tg.textContent=open?'絞り込み・並べ替えを閉じる ▲':'絞り込み・並べ替え ▼';};tg.addEventListener('click',()=>{RFILTERS9=body.style.display==='none';upd();});upd();}}if(LIVE9){const inp=$('rosterSearch');if(inp){inp.focus();try{inp.setSelectionRange(inp.value.length,inp.value.length);}catch(e){}}LIVE9=false;}}
+document.addEventListener('input',e=>{if(e.target&&e.target.id==='rosterSearch'){clearTimeout(liveTimer9);liveTimer9=setTimeout(()=>{if($('rosterSearch')){LIVE9=true;HD.roster('search');}},320);}});
+const stage9Pick=pick;
+pick=function(u){const wasCm=F.cm;stage9Pick(u);if(wasCm){F.cm=0;draw();}};
+const stage9Draw=draw;
+draw=function(){stage9Draw();try{stage9Field();stage9Fuse();stage9Roster();}catch(e){}};
+
 load();draw();
+
 
 
 
