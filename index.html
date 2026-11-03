@@ -986,7 +986,71 @@ rosterScreen=function(){stage5RosterScreen();const heading=document.querySelecto
 // Battle swap menu: reserves first, labelled 控え. Other ranch members remain available after them.
 SWH=function(b){const all=G.r.filter(m=>!b.P.includes(m)&&m.hp>0).sort((a,c)=>(c.rsv?1:0)-(a.rsv?1:0)||a.u-c.u),page=Math.max(0,Math.min(b.swapPage||0,Math.ceil(all.length/12)-1)),rows=all.slice(page*12,page*12+12);return rows.map(m=>`<button data-a="sw:${m.u}">${m.rsv?'控え・':''}${unitName(m)} Lv${m.lv}<small>HP ${m.hp}/${mx(m)}・MP ${b.mp[m.u]??m.mp??mpmax(m)}/${mpmax(m)}</small></button>`).join('')+(all.length>12?`<button data-a="swpage:${page-1}" ${page?'':'disabled'}>前へ</button><button data-a="swpage:${page+1}" ${(page+1)*12<all.length?'':'disabled'}>次へ</button>`:'')+(!all.length?'<p>入れ替えられる仲間がいません。</p>':'');};
 
+// Stage 7: a condition badge and a plain-language learning note for every fusion recipe.
+// Keyed by the equation body (reactants→products, without the catalyst suffix).
+// The five facility recipes keep their detailed REACTION_RULES display; this layer gives
+// all 40 recipes the same at-a-glance treatment, with honest "simplified" flags where
+// real chemistry works differently. No save-data changes.
+const RECIPE_INFO={
+'2H→H2':{cat:'結合',cond:'原子が近づくと自然に結びつく',text:'水素原子は1個では不安定で、2個が結びついて水素分子になると安定する。身のまわりの水素は、この分子の形で存在している。'},
+'2O→O2':{cat:'結合',cond:'原子が近づくと自然に結びつく',text:'酸素も原子1個ではいられず、2個結びついた酸素分子が通常の姿。私たちが呼吸で取り入れる酸素はこの形。'},
+'2N→N2':{cat:'結合',cond:'原子が近づくと自然に結びつく',text:'窒素原子2個は三重結合という非常に強い結びつきで窒素分子になる。その安定さゆえに、窒素は他の物質となかなか反応しない。'},
+'2Cl→Cl2':{cat:'結合',cond:'原子が近づくと自然に結びつく',text:'塩素原子2個が結びついて塩素分子になる。塩素分子は反応性が高く、水道水の消毒などに使われる。'},
+'2H2 + O2→2H2O':{cat:'点火',cond:'点火（火花や熱）で燃焼が始まる',text:'水素と酸素の混合気体に火をつけると、爆発的に燃えて水ができる。水素が「燃える」とは、この反応のこと。'},
+'N2 + 3H2→2NH3':{cat:'高圧・触媒',cond:'高温（約400〜500℃）・高圧＋Fe触媒',text:'工業的なアンモニア合成（ハーバー・ボッシュ法）。肥料の原料を作り、人類の食料生産を支える反応。詳しくは専用設備の「反応のしくみ」へ。'},
+'C + 2H2→CH4':{cat:'加熱・触媒',cond:'高温＋触媒（ニッケルなど）',text:'炭素と水素はそのまま混ぜてもほとんど反応しない。高温で触媒を使うとメタンができる（メタネーション）。メタンは天然ガスの主成分。'},
+'C + O2→CO2':{cat:'燃焼',cond:'点火・加熱で燃える',text:'炭（炭素）が空気中で燃える反応そのもの。木炭や石炭が燃えると二酸化炭素が出る。'},
+'2C + O2→2CO':{cat:'燃焼',cond:'酸素が不足した状態で燃える',text:'酸素が足りないと炭素が燃えきらず、毒性の強い一酸化炭素になる。「不完全燃焼」が危険なのはこのため。'},
+'CO + 2H2→CH3OH':{cat:'高圧・触媒',cond:'温度・圧力制御＋銅系触媒（設備）',text:'工業的なメタノール合成。詳しくは専用設備の「反応のしくみ」へ。'},
+'2CH3OH→CH3OCH3 + H2O':{cat:'触媒・加熱',cond:'固体酸触媒＋加熱（脱水反応）',text:'メタノール2分子から水1分子が取れて、ジメチルエーテルになる。分子から水が取れる反応を「脱水」という。詳しくは専用設備の「反応のしくみ」へ。'},
+'2CH4→C2H4 + 2H2':{cat:'高温',cond:'非常に高い温度（約800℃以上）',text:'メタン同士を高温で反応させてエチレンを取り出す考え方を示した式。現実の工業工程は触媒や酸素を組み合わせた、もっと複雑なものになる（簡略化した表現）。'},
+'C2H4 + H2O→C2H5OH':{cat:'触媒・加圧',cond:'加熱・加圧＋リン酸系触媒（設備）',text:'エチレンに水蒸気を反応させる工業的なエタノール合成。詳しくは専用設備の「反応のしくみ」へ。'},
+'4Fe + 3O2→2Fe2O3':{cat:'常温',cond:'常温でもゆっくり進む（水や塩分で加速）',text:'鉄の「さび」の正体。水や塩分があると速く進み、加熱しても速くなる。'},
+'2Na + Cl2→2NaCl':{cat:'点火',cond:'加熱・点火で激しく反応',text:'ナトリウムを塩素の中で加熱すると、光と熱を出して反応し、食塩（塩化ナトリウム）ができる。'},
+'2K + Cl2→2KCl':{cat:'常温',cond:'触れるだけでも激しく反応することがある',text:'カリウムはナトリウムよりさらに反応性が高く、塩素と強く結びついて塩化カリウムになる。'},
+'2Na + 2H2O→2NaOH + H2':{cat:'常温',cond:'常温で水と激しく反応（発熱）',text:'ナトリウムは水に入れた瞬間に反応し、水素を出しながら水酸化ナトリウムになる。出た熱で水素に引火することもある、危険な反応の代表例。'},
+'HCl + NaOH→NaCl + H2O':{cat:'中和',cond:'常温で混ぜるだけ',text:'酸とアルカリが打ち消し合う「中和」。塩と水ができ、熱が出る（中和熱）。胃薬や水の処理でも使う基本反応。'},
+'H2 + Cl2→2HCl':{cat:'光・点火',cond:'光を当てる、または点火する',text:'水素と塩素の混合気体は、光が当たると爆発的に反応する（光化学反応）。暗い場所ではほとんど進まない。'},
+'2Mg + O2→2MgO':{cat:'燃焼',cond:'点火すると強く燃える',text:'マグネシウムは点火するとまぶしい白い光で燃える。昔のカメラのフラッシュや照明弾にも使われた。'},
+'Si + O2→SiO2':{cat:'高温',cond:'高温で酸化が進む',text:'ケイ素は高温で酸素と結びつき、二酸化ケイ素（石英やガラスの主成分）になる。常温では表面に薄い膜ができるだけ。'},
+'H2 + S→H2S':{cat:'加熱',cond:'硫黄を溶かして水素と加熱する',text:'温泉地の「硫黄のにおい」の正体、硫化水素ができる反応。有毒な気体なので、現実では扱いに注意が必要。'},
+'S + O2→SO2':{cat:'燃焼',cond:'点火で燃える',text:'硫黄が燃えると、刺激臭のある二酸化硫黄が出る。火山ガスや酸性雨の原因物質のひとつ。'},
+'2Ca + O2→2CaO':{cat:'燃焼',cond:'空気中で加熱すると燃える',text:'カルシウムが燃えて酸化カルシウム（生石灰）になる。生石灰は乾燥剤や、運動場の白線引きにも使われる。'},
+'2Cu + O2→2CuO':{cat:'加熱',cond:'空気中で強く加熱する',text:'銅を加熱し続けると、表面が黒い酸化銅（II）に変わる。常温ではごくゆっくりとしか進まない。'},
+'Cu + Cl2→CuCl2':{cat:'加熱',cond:'塩素の中で加熱する',text:'銅は塩素の中で加熱すると反応して塩化銅（II）になる。塩素は金属を酸化させる力が強い。'},
+'2F→F2':{cat:'結合',cond:'原子が結びつく（ただし超危険）',text:'フッ素原子が結びついたフッ素分子は、あらゆる物質と反応する最強クラスの酸化剤。現実では特殊な設備でしか扱えない。'},
+'2Li + F2→2LiF':{cat:'常温',cond:'常温でも激しく反応する',text:'反応性の高いリチウムと、最強クラスのフッ素が出会うと、強く結びついて安定なフッ化リチウムになる。'},
+'4Al + 3O2→2Al2O3':{cat:'常温',cond:'常温でも表面だけ進む',text:'アルミニウムは空気に触れると表面に酸化アルミニウムの薄い膜ができ、内側をさびから守る。アルミがさびに強い理由はこれ。粉末にすると燃焼する。'},
+'2Zn + O2→2ZnO':{cat:'加熱',cond:'加熱すると燃えて進む',text:'亜鉛を強く加熱すると燃えて、白い酸化亜鉛になる。酸化亜鉛は白色顔料や軟膏にも使われる身近な物質。'},
+'2P + 3H2→2PH3':{cat:'簡略',cond:'【ゲーム用の簡略配合】現実の条件とは異なる',text:'現実では、リンと水素は直接ほとんど反応しない。ホスフィンは、リン化カルシウムなどのリン化物に水や酸を加える方法で作るのが実際。この式は原子数を合わせたゲーム表現。'},
+'H2 + F2→2HF':{cat:'常温',cond:'常温・暗所でも爆発的に反応する',text:'フッ素の反応性は別格で、水素とは光がなくても爆発的に結びつく。できるフッ化水素は、ガラスを溶かすほど危険な物質。'},
+'Zn + 2HCl→ZnCl2 + H2':{cat:'常温',cond:'常温で反応する（金属＋酸）',text:'金属に酸をかけると水素を出して溶ける、教科書の基本反応。亜鉛が塩酸に溶けて塩化亜鉛になる。'},
+'CO2 + H2O→H2CO3':{cat:'常温',cond:'常温で、水に溶けると一部が変わる',text:'二酸化炭素が水に溶けると、その一部が炭酸になる。炭酸飲料のシュワシュワや、雨水が少し酸性になる理由。逆向きの反応も同時に起きている（平衡）。'},
+'2SO2 + O2→2SO3':{cat:'触媒',cond:'約400〜500℃＋V₂O₅触媒',text:'硫酸工業の心臓部「接触法」の反応。触媒がないとほとんど進まない反応が、触媒と適した温度で実用的な速さになる好例。'},
+'SO3 + H2O→H2SO4':{cat:'常温',cond:'常温で激しく反応する（強い発熱）',text:'三酸化硫黄は水と会うと激しく反応して硫酸になる。工業では発熱と霧の発生を避けるため、直接水ではなく濃硫酸に吸収させて作る。'},
+'N2 + O2→2NO':{cat:'高温',cond:'約2000℃級の高温、または放電',text:'普段は反応しない窒素と酸素も、雷の放電やエンジン内部の高温では結びつく。排ガス中の窒素酸化物（NOx）の始まりはこれ。'},
+'2NO + O2→2NO2':{cat:'常温',cond:'常温で自然に進む',text:'一酸化窒素は空気に触れると、そのまま酸化されて赤褐色の二酸化窒素になる。大気汚染や光化学スモッグに関わる反応。'},
+'H2 + O2→H2O2':{cat:'簡略',cond:'【ゲーム用の簡略配合に近い】現実の製法は別工程',text:'過酸化水素（消毒液オキシドールの成分）の実際の工業製法は、水素と酸素を直接混ぜるのではなく「アントラキノン法」という循環工程。直接合成は触媒の研究が続いている。'},
+'3O2→2O3':{cat:'放電・光',cond:'放電、または強い紫外線',text:'酸素に放電や紫外線のエネルギーを与えるとオゾンになる。成層圏のオゾン層も、太陽の紫外線で同じように作られている。詳しくは「反応のしくみ」へ。'}
+};
+const recipeKey=r=>{const norm=s=>s.replace(/[₀-₉]/g,c=>'₀₁₂₃₄₅₆₇₈₉'.indexOf(c));return norm(fstr(r.i))+'→'+norm(fstr(r.o));};
+const recipeInfo=r=>RECIPE_INFO[recipeKey(r)];
+const recipeBadge=(r,withButton)=>{const info=recipeInfo(r);if(!info)return '';return `<div class="recipe-info"><span class="recipe-badge">${info.cat}</span><small><b>条件：</b>${info.cond}</small><small>${info.text}</small>${withButton?`<button data-a="react:info.${RR.indexOf(r)}">反応のしくみを見る</button>`:''}</div>`;};
+const stage7Style=document.createElement('style');
+stage7Style.textContent='.recipe-info{margin:7px 0;padding:8px 10px;border:1px solid #3f6f66;border-radius:10px;background:#0d2f33}.recipe-info small{display:block;font-size:12px;color:#cfe4dc;margin-top:3px}.recipe-badge{display:inline-block;background:#287e74;color:#fff;border-radius:999px;padding:1px 9px;font-size:11px;font-weight:700}.recipe-info button{font-size:12px;margin-top:7px;min-height:40px}.all-recipes{margin-top:14px}';
+document.head.appendChild(stage7Style);
+const stage7Requirements=reactionRequirements;
+reactionRequirements=function(r){const base=stage7Requirements(r);if(!recipeInfo(r)||r.conditionKey)return base;return recipeBadge(r,1);};
+const stage7LastHTML=lastHTML;
+lastHTML=function(){const html=stage7LastHTML();if(!LASTF||!html)return html;const r=RR.find(x=>eq(x)===LASTF.e),info=r&&recipeInfo(r);if(!info)return html;const line=`<div><small><span class="recipe-badge">${info.cat}</span> <b>条件：</b>${info.cond} ― ${info.text}</small></div>`;return html.endsWith('</div>')?html.slice(0,-6)+line+'</div>':html+line;};
+function recipeNoteAll(i){const r=RR[i],info=r&&recipeInfo(r);if(!r||!info)return;const rule=REACTION_RULES[r.conditionKey];showResearch('反応のしくみ',`<div class="reaction-formula">${eq(r)}</div><p><span class="recipe-badge">${info.cat}</span></p><p><b>反応が起こる条件：</b>${info.cond}</p><p>${info.text}</p>${r.c?`<p>触媒：${M[r.c][1]}（反応を速くするだけで、それ自身は消費されません）</p>`:''}${rule?`<div class="research-reward">ゲーム内の条件：${rule.condition}<br><small>場所：${rule.dest}</small></div><button data-a="react:note.${r.conditionKey}">専用設備の詳しいしくみを見る</button>`:'<small>代表的な条件を簡略化して表示しています。実際の実験条件や、唯一の製法を示すものではありません。</small>'}`);}
+const stage7React=HD.react;
+HD.react=x=>{if(x.startsWith('info.'))return recipeNoteAll(+x.slice(5));return stage7React(x);};
+const stage7Notebook=reactionNotebook;
+reactionNotebook=function(){stage7Notebook();const d=$('researchDialog');if(!d)return;d.querySelectorAll('p').forEach(p=>{if(p.textContent.includes('まず5つのレシピに'))p.innerHTML=p.innerHTML.replace('まず5つのレシピに専用設備の条件を設定しました。','5つのレシピには専用設備の条件があり、他のレシピにも条件バッジと解説を付けました（下の一覧）。');});d.querySelectorAll('small').forEach(s=>{if(s.textContent.includes('条件未設定'))s.textContent='レシピごとの条件は、代表的なものを簡略化して表示しています。現実には追加条件が必要なものや、原子数だけを合わせたゲーム用の簡略表現（「簡略」バッジ）もあります。';});const close=d.querySelector('.dialog-close');if(!close||d.querySelector('.all-recipes'))return;close.insertAdjacentHTML('beforebegin',`<details class="all-recipes"><summary>すべての配合レシピの条件（${RR.length}件）</summary><div class="research-tasks">${RR.map((r,i)=>{const info=recipeInfo(r);return `<div><b>${eq(r)}</b>${info?`<small><span class="recipe-badge">${info.cat}</span> ${info.cond}</small>`:'<small>条件データなし</small>'}<button data-a="react:info.${i}">しくみを見る</button></div>`;}).join('')}</div></details>`);};
+
 load();draw();
+
 
 </script></body></html>
 
