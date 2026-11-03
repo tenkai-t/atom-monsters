@@ -740,7 +740,7 @@ function reactionRecipeSuggestions(sel){if(!sel.length)return lastHTML();const i
 // UI wording changes deliberately retain existing individual-variation save keys.
 const HEAL_ITEMS={h:{n:'回復薬',amount:50,price:20,action:'hl'},hh:{n:'大回復薬',amount:150,price:50,action:'hhl'}};
 const phaseImmune=m=>m.id==='Au'||m.id==='Pt';
-const LAB_GUIDE='研究所周辺は安全地帯です。探索を続けると、生存している仲間のHPは約12秒ごとに1、MPは約24秒ごとに1自然回復します。回復薬・回復スキルも使えます。';
+const LAB_GUIDE='研究所周辺は安全地帯です。探索を続けると、生存している仲間のHPは約12秒ごとに1、MPは約24秒ごとに1自然回復します。アプリを閉じている間も同じペースで自然回復し、再開時にまとめて反映されます。回復薬・回復スキルも使えます。';
 let HPSEL='';
 function hpItemUI(){return `<section class="msg hp-items"><b>HP回復アイテム</b><small class="hp-item-help">戦闘外でも、所持している仲間を選んで使えます。</small><div class="cmd">${Object.entries(HEAL_ITEMS).map(([key,item])=>`<button data-a="hp:pick.${key}" ${(G.it[key]||0)>0?'':'disabled'}>${item.n} ×${G.it[key]||0}<small>HP＋${item.amount}</small></button>`).join('')}</div>${HPSEL?`<p>${HEAL_ITEMS[HPSEL].n}を使う仲間を選んでください。</p><div class="list">${G.r.map(m=>`<button class="it" data-a="hp:use.${HPSEL}.${m.u}" ${m.hp<=0||m.hp>=mx(m)?'disabled':''}><span class="t">${M[m.id][0]} Lv${m.lv}<br><small>HP ${m.hp}/${mx(m)}${m.hp<=0?' ・蘇生が必要':m.hp>=mx(m)?' ・満タン':''}</small></span></button>`).join('')}</div><button data-a="hp:cancel">やめる</button>`:''}</section>`;}
 HD.hp=x=>{if(S==='b3'||S==='battle')return;const [action,key,uid]=x.split('.');if(action==='cancel'){HPSEL='';return draw();}const item=HEAL_ITEMS[key];if(!item)return;if(action==='pick'){if(!(G.it[key]>0)){msg='回復アイテムを持っていません。';return draw();}HPSEL=key;return draw();}if(action==='use'){const target=G.r.find(m=>m.u===Number(uid));if(!target||!(G.it[key]>0)){HPSEL='';msg='回復アイテムを使えませんでした。';return draw();}if(target.hp<=0){msg='倒れた仲間には蘇生薬や蘇生スキルが必要です。';return draw();}if(target.hp>=mx(target)){msg='その仲間のHPは満タンです。';return draw();}const before=target.hp;target.hp=Math.min(mx(target),target.hp+item.amount);G.it[key]--;HPSEL='';msg=`${item.n}を使い、${M[target.id][0]}のHPが${target.hp-before}回復しました。`;save();draw();}};
@@ -1049,7 +1049,29 @@ HD.react=x=>{if(x.startsWith('info.'))return recipeNoteAll(+x.slice(5));return s
 const stage7Notebook=reactionNotebook;
 reactionNotebook=function(){stage7Notebook();const d=$('researchDialog');if(!d)return;d.querySelectorAll('p').forEach(p=>{if(p.textContent.includes('まず5つのレシピに'))p.innerHTML=p.innerHTML.replace('まず5つのレシピに専用設備の条件を設定しました。','5つのレシピには専用設備の条件があり、他のレシピにも条件バッジと解説を付けました（下の一覧）。');});d.querySelectorAll('small').forEach(s=>{if(s.textContent.includes('条件未設定'))s.textContent='レシピごとの条件は、代表的なものを簡略化して表示しています。現実には追加条件が必要なものや、原子数だけを合わせたゲーム用の簡略表現（「簡略」バッジ）もあります。';});const close=d.querySelector('.dialog-close');if(!close||d.querySelector('.all-recipes'))return;close.insertAdjacentHTML('beforebegin',`<details class="all-recipes"><summary>すべての配合レシピの条件（${RR.length}件）</summary><div class="research-tasks">${RR.map((r,i)=>{const info=recipeInfo(r);return `<div><b>${eq(r)}</b>${info?`<small><span class="recipe-badge">${info.cat}</span> ${info.cond}</small>`:'<small>条件データなし</small>'}<button data-a="react:info.${i}">しくみを見る</button></div>`;}).join('')}</div></details>`);};
 
+// Stage 8: offline natural recovery. The field loop already heals every ally
+// (HP +1 per ~12s tick, MP +1 every other tick, living allies only) but only
+// while the field loop runs. G.regenAt stamps the last settled moment on every
+// non-battle save; on load (and on returning from the background) the elapsed
+// wall-clock time is converted into the same ticks and applied at once.
+// Battles are excluded: a save containing a battle never accrues, so a battle
+// in progress always resumes exactly as it was saved.
+function applyOfflineRegen(){if(!G||B3)return 0;const now=Date.now(),last=G.regenAt;if(!Number.isFinite(last)||last<=0){G.regenAt=now;return 0;}const elapsed=now-last;if(elapsed<0){G.regenAt=now;return 0;}if(elapsed<12000)return 0;const ticks=Math.floor(elapsed/12000),mpTicks=Math.floor(((G._rn||0)+ticks)/2)-Math.floor((G._rn||0)/2);let healed=0;G.r.forEach(m=>{if(m.hp>0&&m.hp<mx(m)){const add=Math.min(mx(m)-m.hp,ticks);m.hp+=add;healed+=add;}if(mpTicks>0){const cur=m.mp??mpmax(m);if(cur<mpmax(m))m.mp=Math.min(mpmax(m),cur+mpTicks);}});G._rn=(G._rn||0)+ticks;G.regenAt=last+ticks*12000;return healed;}
+const stage8Install=installSave;
+let stage8Welcome='',stage8WelcomeAt=0;
+function stage8SetWelcome(w){stage8Welcome=w;stage8WelcomeAt=Date.now();setTimeout(()=>{if(stage8Welcome)draw();},1300);}
+installSave=function(data){stage8Install(data);if(!data.battle){const healed=applyOfflineRegen();if(healed>0&&!B3)stage8SetWelcome(`おかえりなさい。アプリを閉じている間に、仲間のHPが合計${healed}回復しました（自然回復）。`);}};
+const stage8Draw=draw;
+draw=function(){stage8Draw();if(stage8Welcome){msg=stage8Welcome;const fm=$('fm');if(fm)fm.textContent=stage8Welcome;if(Date.now()-stage8WelcomeAt>2500)stage8Welcome='';}};
+const stage8Save=save;
+save=function(){if(!B3&&typeof G!=='undefined'&&G)G.regenAt=Date.now();return stage8Save();};
+const stage8NewG=newG;
+newG=function(){stage8NewG();if(G)G.regenAt=Date.now();};
+addEventListener('pagehide',()=>{if(typeof G!=='undefined'&&G&&!B3){G.regenAt=Date.now();save();}});
+document.addEventListener('visibilitychange',()=>{if(typeof G==='undefined'||!G)return;if(document.hidden){if(!B3){G.regenAt=Date.now();save();}}else{const healed=applyOfflineRegen();if(healed>0){stage8SetWelcome(`おかえりなさい。アプリを閉じている間に、仲間のHPが合計${healed}回復しました（自然回復）。`);save();draw();}}});
+
 load();draw();
+
 
 
 </script></body></html>
