@@ -1126,7 +1126,27 @@ pick=function(u){const wasCm=F.cm;stage9Pick(u);if(wasCm){F.cm=0;draw();}};
 const stage9Draw=draw;
 draw=function(){stage9Draw();try{stage9Field();stage9Fuse();stage9Roster();}catch(e){}};
 
+// Stage 10: the contextual action buttons on the field screen (research
+// "inspect" and the reaction-facility "use" button) used to render in panels
+// below the map, so on a phone they sat below the fold and needed a scroll
+// exactly when they became relevant. They are now moved into a floating dock
+// at the bottom of the map view whenever they appear: same buttons, same
+// delegated handlers, just relocated while present and removed when the
+// player walks away. No rule or save changes.
+const stage10Style=document.createElement('style');
+stage10Style.textContent=`
+.fab-dock{position:absolute;left:12px;right:12px;bottom:12px;z-index:6;display:none;flex-direction:column;gap:8px}
+.fab-dock.on{display:flex}
+.fab-dock button{width:100%;min-height:52px;font-size:16px;font-weight:800;border-radius:14px;box-shadow:0 12px 26px -10px #000;cursor:pointer}
+.fab-dock button.research-interact{background:#8ff5cf;color:#06251d;border:0}
+.fab-dock button.fab-facility{background:var(--pan);color:var(--ink);border:1px solid var(--acc,#35e0ae)}
+`;
+document.head.appendChild(stage10Style);
+function stage10Dock(){if(S!=='field')return;const fv=$('fv');if(!fv)return;let dock=$('fabDock10');if(!dock){dock=document.createElement('div');dock.id='fabDock10';dock.className='fab-dock';dock.addEventListener('pointerdown',e=>e.stopPropagation());fv.appendChild(dock);}const move=(srcId,btnSel,active,cls)=>{const src=$(srcId),btn=src?src.querySelector(btnSel):null,cur=dock.querySelector(btnSel);if(btn&&btn!==cur){if(cur)cur.remove();if(cls)btn.classList.add(cls);dock.appendChild(btn);}else if(!btn&&cur&&!active)cur.remove();};move('reactionFacilityNear','.facility-panel button',!!currentReactionFacility(),'fab-facility');move('researchNear','button.research-interact',!!nearPoint(),'');dock.classList.toggle('on',!!dock.querySelector('button'));}
+setInterval(stage10Dock,300);
+
 load();draw();
+
 
 
 
