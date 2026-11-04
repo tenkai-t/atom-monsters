@@ -1145,7 +1145,46 @@ document.head.appendChild(stage10Style);
 function stage10Dock(){if(S!=='field')return;const fv=$('fv');if(!fv)return;let dock=$('fabDock10');if(!dock){dock=document.createElement('div');dock.id='fabDock10';dock.className='fab-dock';dock.addEventListener('pointerdown',e=>e.stopPropagation());fv.appendChild(dock);}const move=(srcId,btnSel,active,cls)=>{const src=$(srcId),btn=src?src.querySelector(btnSel):null,cur=dock.querySelector(btnSel);if(btn&&btn!==cur){if(cur)cur.remove();if(cls)btn.classList.add(cls);dock.appendChild(btn);}else if(!btn&&cur&&!active)cur.remove();};move('reactionFacilityNear','.facility-panel button',!!currentReactionFacility(),'fab-facility');move('researchNear','button.research-interact',!!nearPoint(),'');dock.classList.toggle('on',!!dock.querySelector('button'));}
 setInterval(stage10Dock,300);
 
+// Stage 11: four more usability fixes from the follow-up audit. DOM/CSS level
+// only; no game rules, EXP, or save-format changes.
+//  A) Fusion: the action row (reselect / catalyst / fuse) sticks to the top
+//     of the viewport while scrolling the material list.
+//  B) Field: while any ally is injured and a healing item is in stock, the
+//     existing heal-item panel is moved into the map's floating dock.
+//  C) Roster: a second "back to list" button at the bottom of the detail
+//     panel (mobile hides the list while the detail is open).
+//  D) Field: important one-line notices (weather, gates, chests, events)
+//     also appear as a temporary toast on the map instead of only in the
+//     small line under it that gets overwritten within seconds.
+const stage11Style=document.createElement('style');
+stage11Style.textContent=`
+.fusion-actions{position:sticky;top:8px;z-index:30;background:var(--pan);border:1px solid var(--ln);border-radius:16px;padding:10px;box-shadow:0 14px 30px -14px #000}
+.fab-dock{max-height:calc(100% - 20px);overflow-y:auto}
+.fab-dock .hp-items{margin:0;width:100%}
+.detail-back-bottom11{width:100%;min-height:48px;margin-top:12px;font-weight:700}
+.fm-toast{position:absolute;top:10px;left:50%;transform:translate(-50%,-8px);max-width:86%;background:rgba(6,32,28,.93);color:#eafff5;border:1px solid #35e0ae;border-radius:16px;padding:9px 16px;font-size:13px;font-weight:700;line-height:1.45;text-align:center;opacity:0;pointer-events:none;transition:opacity .25s,transform .25s;z-index:7}
+.fm-toast.show{opacity:1;transform:translate(-50%,0)}
+`;
+document.head.appendChild(stage11Style);
+function stage11RosterDetail(){const sec=document.querySelector('#app .roster-detail');if(!sec||!sec.dataset.uid||sec.querySelector('.detail-back-bottom11'))return;const b=document.createElement('button');b.type='button';b.className='detail-back-bottom11';b.setAttribute('data-a','roster:close');b.textContent='一覧へ戻る';sec.appendChild(b);}
+const stage11Draw=draw;
+draw=function(){stage11Draw();try{stage11RosterDetail();}catch(e){}};
+let fmLast11='',fmTimer11=null;
+function stage11Tick(){if(S!=='field'||B3)return;const fv=$('fv');if(!fv)return;let dock=$('fabDock10');if(!dock){dock=document.createElement('div');dock.id='fabDock10';dock.className='fab-dock';dock.addEventListener('pointerdown',e=>e.stopPropagation());fv.appendChild(dock);}
+ // B: heal-item shortcut into the dock while someone is injured and stocked
+ const sec=document.querySelector('.hp-items');
+ if(sec){const injured=G.r.some(m=>m.hp>0&&m.hp<mx(m)),stocked=(G.it.h||0)>0||(G.it.hh||0)>0,inDock=!!sec.closest('#fabDock10');
+  if((injured&&stocked)||(inDock&&HPSEL)){if(!inDock)dock.appendChild(sec);}
+  else if(inDock){draw();return;}}
+ if(dock.children.length)dock.classList.add('on');
+ // D: toast mirror of the field message line (repetitive guide lines excluded)
+ let toast=$('fmToast11');if(!toast){toast=document.createElement('div');toast.id='fmToast11';toast.className='fm-toast';fv.appendChild(toast);}
+ const fm=$('fm');if(fm){const txt=(fm.textContent||'').trim();if(txt&&txt!==fmLast11){fmLast11=txt;if(!/^(研究所は安全地帯です|画面をドラッグ)/.test(txt)){toast.textContent=txt;toast.classList.add('show');clearTimeout(fmTimer11);fmTimer11=setTimeout(()=>toast.classList.remove('show'),3600);}}}
+}
+setInterval(stage11Tick,300);
+
 load();draw();
+
 
 
 
