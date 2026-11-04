@@ -1161,6 +1161,7 @@ stage11Style.textContent=`
 .fusion-actions{position:sticky;top:8px;z-index:30;background:var(--pan);border:1px solid var(--ln);border-radius:16px;padding:10px;box-shadow:0 14px 30px -14px #000}
 .fab-dock{max-height:calc(100% - 20px);overflow-y:auto}
 .fab-dock .hp-items{margin:0;width:100%}
+.hp-close11{width:100%;min-height:44px;margin-top:8px;font-weight:700}
 .detail-back-bottom11{width:100%;min-height:48px;margin-top:12px;font-weight:700}
 .fm-toast{position:absolute;top:10px;left:50%;transform:translate(-50%,-8px);max-width:86%;background:rgba(6,32,28,.93);color:#eafff5;border:1px solid #35e0ae;border-radius:16px;padding:9px 16px;font-size:13px;font-weight:700;line-height:1.45;text-align:center;opacity:0;pointer-events:none;transition:opacity .25s,transform .25s;z-index:7}
 .fm-toast.show{opacity:1;transform:translate(-50%,0)}
@@ -1169,12 +1170,14 @@ document.head.appendChild(stage11Style);
 function stage11RosterDetail(){const sec=document.querySelector('#app .roster-detail');if(!sec||!sec.dataset.uid||sec.querySelector('.detail-back-bottom11'))return;const b=document.createElement('button');b.type='button';b.className='detail-back-bottom11';b.setAttribute('data-a','roster:close');b.textContent='一覧へ戻る';sec.appendChild(b);}
 const stage11Draw=draw;
 draw=function(){stage11Draw();try{stage11RosterDetail();}catch(e){}};
-let fmLast11='',fmTimer11=null;
-function stage11Tick(){if(S!=='field'||B3)return;const fv=$('fv');if(!fv)return;let dock=$('fabDock10');if(!dock){dock=document.createElement('div');dock.id='fabDock10';dock.className='fab-dock';dock.addEventListener('pointerdown',e=>e.stopPropagation());fv.appendChild(dock);}
+let fmLast11='',fmTimer11=null,HEALDISMISS11=null;
+function healSnapshot11(){const s={};G.r.forEach(m=>{if(m.hp>0&&m.hp<mx(m))s[m.u]=m.hp;});return s;}
+function healNeeded11(){if(!HEALDISMISS11)return true;return G.r.some(m=>m.hp>0&&m.hp<mx(m)&&(HEALDISMISS11[m.u]===undefined||m.hp<HEALDISMISS11[m.u]));}
+function stage11Tick(){if(S!=='field')return;if(B3){HEALDISMISS11=null;return;}const fv=$('fv');if(!fv)return;let dock=$('fabDock10');if(!dock){dock=document.createElement('div');dock.id='fabDock10';dock.className='fab-dock';dock.addEventListener('pointerdown',e=>e.stopPropagation());fv.appendChild(dock);}
  // B: heal-item shortcut into the dock while someone is injured and stocked
  const sec=document.querySelector('.hp-items');
  if(sec){const injured=G.r.some(m=>m.hp>0&&m.hp<mx(m)),stocked=(G.it.h||0)>0||(G.it.hh||0)>0,inDock=!!sec.closest('#fabDock10');
-  if((injured&&stocked)||(inDock&&HPSEL)){if(!inDock)dock.appendChild(sec);}
+  if((injured&&stocked&&healNeeded11())||(inDock&&HPSEL)){if(!inDock)dock.appendChild(sec);if(!sec.querySelector('.hp-close11')){const cb=document.createElement('button');cb.type='button';cb.className='hp-close11';cb.textContent='閉じる ✕';cb.addEventListener('click',()=>{HEALDISMISS11=healSnapshot11();HPSEL='';});sec.appendChild(cb);}}
   else if(inDock){draw();return;}}
  if(dock.children.length)dock.classList.add('on');
  // D: toast mirror of the field message line (repetitive guide lines excluded)
